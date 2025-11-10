@@ -1,424 +1,399 @@
 #include <iostream>
-#include <string>
-#include <vector>
 #include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <limits>
-
+using namespace std;
 
 class LibraryItem {
-protected: 
+public: 
     int itemID;
-    std::string title;
-    bool isIssued;
+    char title[100];
+    int isIssued;
 
-public:
-    LibraryItem(int id, const std::string& title)
-        : itemID(id), title(title), isIssued(false) {}
+    LibraryItem(int id, const char* titleStr) {
+        itemID = id;
+        
+        int i = 0;
+        while (titleStr[i] != '\0') {
+            title[i] = titleStr[i];
+            i++;
+        }
+        title[i] = '\0';
+        
+        isIssued = 0; 
+    }
 
-    virtual ~LibraryItem() {} 
+    virtual void displayDetails() = 0; 
 
-    
-    virtual void displayDetails() const = 0; 
-
-    
-    int getID() const { return itemID; }
-    std::string getTitle() const { return title; }
-    bool getIsIssued() const { return isIssued; }
-
-    
-    void setIssued(bool status) { isIssued = status; }
+    int getID() { return itemID; }
+    const char* getTitle() { return title; }
+    int getIsIssued() { return isIssued; }
+    void setIssued(int status) { isIssued = status; }
 };
-
-
 
 class Book : public LibraryItem {
-private:
-    std::string author;
+public:
+    char author[100];
     int pageCount;
 
-public:
-    Book(int id, const std::string& title, const std::string& author, int pages)
-        : LibraryItem(id, title), author(author), pageCount(pages) {}
+    Book(int id, const char* titleStr, const char* authorStr, int pages)
+        : LibraryItem(id, titleStr) {
+        
+        int i = 0;
+        while (authorStr[i] != '\0') {
+            author[i] = authorStr[i];
+            i++;
+        }
+        author[i] = '\0';
+        
+        this->pageCount = pages;
+    }
 
-    
-    void displayDetails() const override;
-
-    
-    std::string getAuthor() const { return author; }
-    int getPageCount() const { return pageCount; }
+    void displayDetails() {
+        cout << "--- Book Details ---" << endl;
+        cout << "ID: \t\t" << getID() << endl;
+        cout << "Title: \t\t" << getTitle() << endl;
+        cout << "Author: \t" << author << endl;
+        cout << "Page Count: \t" << pageCount << endl;
+        cout << "Status: \t" << (getIsIssued() == 1 ? "Issued" : "Available") << endl;
+        cout << "--------------------" << endl;
+    }
 };
 
-
-void Book::displayDetails() const {
-    std::cout << "--- Book Details ---" << std::endl;
-    std::cout << "ID: \t\t" << itemID << std::endl;
-    std::cout << "Title: \t\t" << title << std::endl;
-    std::cout << "Author: \t" << author << std::endl;
-    std::cout << "Page Count: \t" << pageCount << std::endl;
-    std::cout << "Status: \t" << (isIssued ? "Issued" : "Available") << std::endl;
-    std::cout << "--------------------" << std::endl;
-}
-
-
-
 class Member {
-protected:
-    std::string name;
+public:
+    char name[100];
     int memberID;
-    
     
     static int nextID; 
 
-public:
-    Member(const std::string& name); 
-    virtual ~Member() {} 
+    Member(const char* nameStr) {
+        int i = 0;
+        while (nameStr[i] != '\0') {
+            name[i] = nameStr[i];
+            i++;
+        }
+        name[i] = '\0';
 
-    
-    std::string getName() const { return name; }
-    int getID() const { return memberID; }
+        this->memberID = nextID++;
+    }
 
-    
-    virtual void displayDetails() const;
+    void displayDetails() {
+        cout << "--- Member Details ---" << endl;
+        cout << "ID: \t" << getID() << endl;
+        cout << "Name: \t" << getName() << endl;
+        cout << "----------------------" << endl;
+    }
+
+    const char* getName() { return name; }
+    int getID() { return memberID; }
 };
-
 
 int Member::nextID = 1001;
 
+const int MAX_SIZE = 100;
 
-Member::Member(const std::string& name) : name(name) {
-    this->memberID = nextID++; 
-}
+LibraryItem* g_items[MAX_SIZE];
+Member* g_members[MAX_SIZE];
+int g_itemCount = 0;
+int g_memberCount = 0;
 
-void Member::displayDetails() const {
-    std::cout << "--- Member Details ---" << std::endl;
-    std::cout << "ID: \t" << this->memberID << std::endl;
-    std::cout << "Name: \t" << this->name << std::endl;
-    std::cout << "----------------------" << std::endl;
-}
-
-
-
-class StudentMember : public Member {
-private:
-    std::string studentID; 
-
-public:
-    StudentMember(const std::string& name, const std::string& studentID);
-
-    
-    void displayDetails() const override;
-
-    
-    std::string getStudentID() const { return studentID; }
-};
-
-
-StudentMember::StudentMember(const std::string& name, const std::string& studentID)
-    : Member(name) { 
-    this->studentID = studentID;
-}
-
-void StudentMember::displayDetails() const {
-    std::cout << "--- Student Member ---" << std::endl;
-    std::cout << "ID: \t" << getID() << std::endl;
-    std::cout << "Name: \t" << getName() << std::endl;
-    std::cout << "Stu. ID: " << this->studentID << std::endl;
-    std::cout << "----------------------" << std::endl;
-}
-
-
-
-class Library {
-private:
-    std::vector<LibraryItem*> m_items;
-    std::vector<Member*> m_members;
-
-    void loadData();
-    void saveData();
-
-public:
-    Library();
-    ~Library();
-
-    void addItem(LibraryItem* item);
-    void addMember(Member* member);
-
-    void displayAllItems() const;
-    void displayAllMembers() const;
-
-    
-    LibraryItem* findBook(int itemID);
-    Member* findMember(int memberID);
-
-    
-    void issueBook(int bookID, int memberID, int loanDays = 14);
-};
-
-
-Library::Library() {
-    std::cout << "Library object created. Loading data..." << std::endl;
-    try {
-        loadData();
-    } catch (const std::exception& e) {
-        std::cerr << "Error loading data: " << e.what() << std::endl;
+void addItem(LibraryItem* item) {
+    if (g_itemCount < MAX_SIZE) {
+        g_items[g_itemCount] = item;
+        g_itemCount++;
+    } else {
+        cout << "Error: Library book storage is full." << endl;
     }
 }
 
-Library::~Library() {
-    std::cout << std::endl << "Library object destroying. Saving data..." << std::endl;
-    try {
-        saveData();
-    } catch (const std::exception& e) {
-        std::cerr << "Error saving data: " << e.what() << std::endl;
+void addMember(Member* member) {
+    if (g_memberCount < MAX_SIZE) {
+        g_members[g_memberCount] = member;
+        g_memberCount++;
+    } else {
+        cout << "Error: Library member storage is full." << endl;
     }
-    
-    std::cout << "Cleaning up memory..." << std::endl;
-    for (LibraryItem* item : m_items) { delete item; }
-    for (Member* member : m_members) { delete member; }
 }
 
-
-void Library::addItem(LibraryItem* item) {
-    m_items.push_back(item);
-}
-
-void Library::addMember(Member* member) {
-    m_members.push_back(member);
-}
-
-void Library::displayAllItems() const {
-    std::cout << std::endl << "--- All Library Items ---" << std::endl;
-    if (m_items.empty()) {
-        std::cout << "(No items in library)" << std::endl;
+void displayAllItems() {
+    cout << endl << "--- All Library Items ---" << endl;
+    if (g_itemCount == 0) {
+        cout << "(No items in library)" << endl;
         return;
     }
-    for (const auto& item : m_items) {
-        item->displayDetails(); 
+    for (int i = 0; i < g_itemCount; i++) {
+        g_items[i]->displayDetails(); 
     }
 }
 
-void Library::displayAllMembers() const {
-    std::cout << std::endl << "--- All Library Members ---" << std::endl;
-    if (m_members.empty()) {
-        std::cout << "(No members in library)" << std::endl;
+void displayAllMembers() {
+    cout << endl << "--- All Library Members ---" << endl;
+    if (g_memberCount == 0) {
+        cout << "(No members in library)" << endl;
         return;
     }
-    for (const auto& member : m_members) {
-        member->displayDetails(); 
+    for (int i = 0; i < g_memberCount; i++) {
+        g_members[i]->displayDetails(); 
     }
 }
 
-
-LibraryItem* Library::findBook(int itemID) {
-    for (auto* item : m_items) {
-        if (item->getID() == itemID) {
-            return item;
+LibraryItem* findBook(int itemID) {
+    for (int i = 0; i < g_itemCount; i++) {
+        if (g_items[i]->getID() == itemID) {
+            return g_items[i];
         }
     }
-    throw std::runtime_error("Book not found: ID " + std::to_string(itemID));
+    return nullptr;
 }
 
-
-Member* Library::findMember(int memberID) {
-    for (auto* member : m_members) {
-        if (member->getID() == memberID) {
-            return member;
+Member* findMember(int memberID) {
+    for (int i = 0; i < g_memberCount; i++) {
+        if (g_members[i]->getID() == memberID) { 
+            return g_members[i];
         }
     }
-    throw std::runtime_error("Member not found: ID " + std::to_string(memberID));
+    return nullptr;
 }
 
-void Library::issueBook(int bookID, int memberID, int loanDays) {
+void issueBook(int bookID, int memberID) {
     LibraryItem* book = findBook(bookID);
-    Member* member = findMember(memberID); 
-
-    if (book->getIsIssued()) {
-        throw std::runtime_error("Book is already issued.");
+    if (book == nullptr) {
+        cout << "Error: Book not found." << endl;
+        return;
     }
 
-    book->setIssued(true);
-    std::cout << "Book '" << book->getTitle() << "' issued to "
-              << member->getName() << " for " << loanDays << " days." << std::endl;
+    Member* member = findMember(memberID);
+    if (member == nullptr) {
+        cout << "Error: Member not found." << endl;
+        return;
+    }
+
+    if (book->getIsIssued() == 1) {
+        cout << "Error: Book is already issued." << endl;
+        return;
+    }
+
+    book->setIssued(1);
+    
+    cout << "\n--- RECEIPT ---" << endl;
+    cout << "Book Issued Successfully." << endl;
+    cout << "-----------------" << endl;
+    cout << "Book Title: " << book->getTitle() << endl;
+    cout << "Member Name: " << member->getName() << endl;
+    cout << "Loan Period: 14 days." << endl;
+    cout << "-----------------\n" << endl;
 }
 
-
-void Library::saveData() {
-    std::ofstream itemFile("items.csv");
-    if (!itemFile) { throw std::runtime_error("Could not open items.csv"); }
-    for (const auto* item : m_items) {
-        if (const Book* book = dynamic_cast<const Book*>(item)) {
-            itemFile << "B," << book->getID() << "," << book->getTitle() << ","
-                     << book->getAuthor() << "," << book->getPageCount() << "\n";
-        }
+void saveData() {
+    ofstream itemFile("items.csv");
+    if (!itemFile) { 
+        cout << "Error: Could not open items.csv for saving." << endl;
+        return;
+    }
+    for (int i = 0; i < g_itemCount; i++) {
+        Book* book = (Book*)g_items[i];
+        itemFile << "B," << book->getID() << "," << book->getTitle() << ","
+                 << book->author << "," << book->pageCount << "\n";
     }
     itemFile.close();
 
-    std::ofstream memberFile("members.csv");
-    if (!memberFile) { throw std::runtime_error("Could not open members.csv"); }
-    for (const auto* member : m_members) {
-        if (const StudentMember* student = dynamic_cast<const StudentMember*>(member)) {
-            memberFile << "S," << student->getID() << "," << student->getName() << ","
-                       << student->getStudentID() << "\n";
-        } else {
-            memberFile << "M," << member->getID() << "," << member->getName() << "\n";
-        }
+    ofstream memberFile("members.csv");
+    if (!memberFile) { 
+        cout << "Error: Could not open members.csv for saving." << endl;
+        return;
+    }
+    for (int i = 0; i < g_memberCount; i++) {
+        Member* member = g_members[i];
+        memberFile << "M," << member->getID() << "," << member->getName() << "\n";
     }
     memberFile.close();
-    std::cout << "Data saved successfully." << std::endl;
+    cout << "Data saved successfully." << endl;
 }
 
-void Library::loadData() {
-    std::ifstream itemFile("items.csv");
+void loadData() {
+    char line[256];
+    
+    ifstream itemFile("items.csv");
     if (itemFile) {
-        std::string line;
-        while (std::getline(itemFile, line)) {
-            std::stringstream ss(line);
-            std::string segment;
-            std::vector<std::string> parts;
-            while (std::getline(ss, segment, ',')) { parts.push_back(segment); }
+        while (itemFile.getline(line, 256)) {
+            if (g_itemCount >= MAX_SIZE) break;
 
-            if (parts.empty()) continue;
-            try {
-                if (parts[0] == "B") { 
-                    addItem(new Book(std::stoi(parts[1]), parts[2], parts[3], std::stoi(parts[4])));
+            char parts[5][100];
+            int partIndex = 0;
+            int charIndex = 0;
+            
+            for (int i = 0; line[i] != '\0'; i++) {
+                if (line[i] == ',') {
+                    parts[partIndex][charIndex] = '\0';
+                    partIndex++;
+                    charIndex = 0;
+                } else {
+                    parts[partIndex][charIndex] = line[i];
+                    charIndex++;
                 }
-            } catch (const std::exception& e) {
-                std::cerr << "Error parsing items.csv: " << e.what() << std::endl;
+            }
+            parts[partIndex][charIndex] = '\0';
+
+            if (parts[0][0] == 'B') { 
+                
+                int id = 0;
+                int i = 0;
+                while (parts[1][i] != '\0') {
+                    id = id * 10 + (parts[1][i] - '0');
+                    i++;
+                }
+
+                int pages = 0;
+                i = 0;
+                while (parts[4][i] != '\0') {
+                    pages = pages * 10 + (parts[4][i] - '0');
+                    i++;
+                }
+                
+                addItem(new Book(id, parts[2], parts[3], pages));
             }
         }
         itemFile.close();
     }
 
-    std::ifstream memberFile("members.csv");
+    ifstream memberFile("members.csv");
     if (memberFile) {
-        std::string line;
-        while (std::getline(memberFile, line)) {
-            std::stringstream ss(line);
-            std::string segment;
-            std::vector<std::string> parts;
-            while (std::getline(ss, segment, ',')) { parts.push_back(segment); }
+        while (memberFile.getline(line, 256)) {
+            if (g_memberCount >= MAX_SIZE) break;
             
-            if (parts.empty()) continue;
-            try {
-               
-                if (parts[0] == "M") { 
-                    addMember(new Member(parts[2]));
-                } else if (parts[0] == "S") { 
-                    addMember(new StudentMember(parts[2], parts[3]));
+            char parts[3][100];
+            int partIndex = 0;
+            int charIndex = 0;
+            
+            for (int i = 0; line[i] != '\0'; i++) {
+                if (line[i] == ',') {
+                    parts[partIndex][charIndex] = '\0';
+                    partIndex++;
+                    charIndex = 0;
+                } else {
+                    parts[partIndex][charIndex] = line[i];
+                    charIndex++;
                 }
-            } catch (const std::exception& e) {
-                std::cerr << "Error parsing members.csv: " << e.what() << std::endl;
+            }
+            parts[partIndex][charIndex] = '\0';
+            
+            if (parts[0][0] == 'M') { 
+                addMember(new Member(parts[2]));
             }
         }
         memberFile.close();
     }
-    std::cout << "Data loaded." << std::endl;
+    cout << "Data loaded." << endl;
 }
-
-
 
 void clearInput() {
-    std::cin.clear();
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    cin.clear();
+    cin.ignore(100, '\n');
 }
 
-
-
 int main() {
-    Library myLibrary;
+    cout << "Library System Starting..." << endl;
+    loadData();
+
+    if (g_itemCount == 0) {
+        cout << "Data files not found. Loading default books." << endl;
+        addItem(new Book(101, "The C++ Book", "Some Guy", 100));
+        addItem(new Book(102, "Another C++ Book", "Some Girl", 200));
+        addItem(new Book(103, "C++ for Dummies", "A Smart Person", 300));
+    }
+    if (g_memberCount == 0) {
+        cout << "Loading default member." << endl;
+        addMember(new Member("Default User"));
+    }
+
     int choice = -1;
 
     while (choice != 0) {
-        std::cout << "\n--- Library Menu ---" << std::endl;
-        std::cout << "1. Add Book" << std::endl;
-        std::cout << "2. Add Member" << std::endl;
-        std::cout << "3. Issue Book" << std::endl;
-        std::cout << "4. Find Book" << std::endl;
-        std::cout << "5. Find Member" << std::endl;
-        std::cout << "6. Display All Items" << std::endl;
-        std::cout << "7. Display All Members" << std::endl;
-        std::cout << "0. Exit" << std::endl;
-        std::cout << "Enter your choice: ";
+        cout << "\n--- Library Menu ---" << endl;
+        cout << "1. Add Book" << endl;
+        cout << "2. Add Member" << endl;
+        cout << "3. Issue Book" << endl;
+        cout << "4. Find Book" << endl;
+        cout << "5. Find Member" << endl;
+        cout << "6. Display All Items" << endl;
+        cout << "7. Display All Members" << endl;
+        cout << "0. Exit" << endl;
+        cout << "Enter your choice: ";
         
-        std::cin >> choice;
-
-        if (std::cin.fail()) {
-            std::cout << "Invalid input. Please enter a number." << std::endl;
-            clearInput();
-            choice = -1;
-            continue;
-        }
+        cin >> choice;
         clearInput(); 
 
-        try {
-            switch (choice) {
-                case 1: { 
-                    std::string title, author;
-                    int id, pages;
-                    std::cout << "Enter Book ID: "; std::cin >> id; clearInput();
-                    std::cout << "Enter Title: "; std::getline(std::cin, title);
-                    std::cout << "Enter Author: "; std::getline(std::cin, author);
-                    std::cout << "Enter Pages: "; std::cin >> pages; clearInput();
-                    myLibrary.addItem(new Book(id, title, author, pages));
-                    std::cout << "Book added!" << std::endl;
-                    break;
-                }
-                case 2: { 
-                    std::string name, studentID;
-                    int type;
-                    std::cout << "Enter Name: "; std::getline(std::cin, name);
-                    std::cout << "Member type (1-Standard, 2-Student): "; std::cin >> type; clearInput();
-                    if (type == 2) {
-                        std::cout << "Enter Student ID: "; std::getline(std::cin, studentID);
-                        myLibrary.addMember(new StudentMember(name, studentID));
-                    } else {
-                        myLibrary.addMember(new Member(name));
-                    }
-                    std::cout << "Member added!" << std::endl;
-                    break;
-                }
-                case 3: { 
-                    int bookID, memberID;
-                    std::cout << "Enter Book ID: "; std::cin >> bookID; clearInput();
-                    std::cout << "Enter Member ID: "; std::cin >> memberID; clearInput();
-                    myLibrary.issueBook(bookID, memberID); 
-                    break;
-                }
-                case 4: { 
-                    std::cout << "Enter Book ID: "; int id; std::cin >> id; clearInput();
-                    LibraryItem* book = myLibrary.findBook(id);
-                    std::cout << "--- Book Found! ---" << std::endl;
-                    book->displayDetails();
-                    break;
-                }
-                case 5: { 
-                    std::cout << "Enter Member ID: "; int id; std::cin >> id; clearInput();
-                    Member* member = myLibrary.findMember(id);
-                    std::cout << "--- Member Found! ---" << std::endl;
-                    member->displayDetails();
-                    break;
-                }
-                case 6: 
-                    myLibrary.displayAllItems();
-                    break;
-                case 7: 
-                    myLibrary.displayAllMembers();
-                    break;
-                case 0:
-                    std::cout << "Exiting..." << std::endl;
-                    break;
-                default:
-                    std::cout << "Invalid choice. Please try again." << std::endl;
-                    break;
+        switch (choice) {
+            case 1: { 
+                char title[100], author[100];
+                int id, pages;
+                cout << "Enter Book ID: "; cin >> id; clearInput();
+                cout << "Enter Title: "; cin.getline(title, 100);
+                cout << "Enter Author: "; cin.getline(author, 100);
+                cout << "Enter Pages: "; cin >> pages; clearInput();
+                addItem(new Book(id, title, author, pages));
+                cout << "Book added!" << endl;
+                break;
             }
+            case 2: { 
+                char name[100];
+                cout << "Enter Name: "; cin.getline(name, 100);
+                addMember(new Member(name));
+                cout << "Member added!" << endl;
+                break;
+            }
+            case 3: { 
+                int bookID, memberID;
+                cout << "Enter Book ID: "; cin >> bookID; clearInput();
+                cout << "Enter Member ID: "; cin >> memberID; clearInput();
+                issueBook(bookID, memberID); 
+                break;
+            }
+            case 4: { 
+                cout << "Enter Book ID: "; int id; cin >> id; clearInput();
+                LibraryItem* book = findBook(id);
+                if (book == nullptr) {
+                    cout << "--- Book Not Found! ---" << endl;
+                } else {
+                    cout << "--- Book Found! ---" << endl;
+                    book->displayDetails();
+                }
+                break;
+            }
+            case 5: { 
+                cout << "Enter Member ID: "; int id; cin >> id; clearInput();
+                Member* member = findMember(id);
+                if (member == nullptr) {
+                    cout << "--- Member Not Found! ---" << endl;
+                } else {
+                    cout << "--- Member Found! ---" << endl;
+                    member->displayDetails();
+                }
+                break;
+            }
+            case 6: 
+                displayAllItems();
+                break;
+            case 7: 
+                displayAllMembers();
+                break;
+            case 0:
+                cout << "Exiting..." << endl;
+                break;
+            default:
+                cout << "Invalid choice. Please try again." << endl;
+                break;
         }
-        catch (const std::exception& e) {
-            std::cout << "Error: " << e.what() << std::endl;
-        }
+    }
+    
+    cout << "Saving data before closing..." << endl;
+    saveData();
+    
+    for (int i = 0; i < g_itemCount; i++) {
+        delete g_items[i];
+    }
+    for (int i = 0; i < g_memberCount; i++) {
+        delete g_members[i];
     }
 
     return 0; 
-
 }
